@@ -8,44 +8,53 @@
       dest: /family.txt
       mode: '777'
 
-# Second play
+## Second play
 - name: Play - for Alpines Nodejs app
   hosts: app_group
   tasks:
-  - name: NodeJs is installed
+  - name: Update Alpine package cache
     apk:
-      name: "{{ item }}"
       update_cache: yes
+
+  - name: Install Node.js and npm
+    apk:
+      name:
+        - nodejs
+        - npm  # Fix: Install npm separately
       state: latest
-    loop:
-    - nodejs
-    - nodejs-npm
+
   - name: app directory is created
     file:
       path: /node-app
       state: directory
+
   - name: app is installed
     template:
       src: app.js.j2
       dest: /node-app/app.js
+
   - name: app dependencies file is copied
     copy:
       src: package.json
       dest: /node-app/package.json
+
   - name: app dependencies are installed
     npm:
       path: /node-app
       state: present
       production: true
-  - name: Install forever (to run Node.js app).
-    npm: name=forever global=yes state=present
-  
-  - name: Check list of Node.js apps running.
+
+  - name: Install `forever` globally (to keep app running)
+    npm:
+      name: forever
+      global: yes
+      state: present
+
+  - name: Check list of running Node.js apps
     command: forever list
     register: forever_list
     changed_when: false
 
-  - name: Start example Node.js app.
+  - name: Start example Node.js app
     command: forever start /node-app/app.js
     when: "forever_list.stdout.find('/node-app/app.js') == -1"
-
